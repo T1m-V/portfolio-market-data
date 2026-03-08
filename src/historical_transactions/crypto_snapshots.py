@@ -7,8 +7,8 @@ from pathlib import Path
 import pandas as pd
 
 from file_paths import (
+    BLOCKCHAIN_SNAPSHOT_FOLDER,
     BLOCKCHAIN_TRANSACTIONS_FOLDER,
-    BLOCKHAIN_SNAPSHOT_FOLDER,
     CURRENCY_METADATA,
     PRICES_FOLDER,
     TOKENS_FOLDER,
@@ -422,5 +422,5 @@ def generate_portfolio_snapshots(input_csv: Path, output_csv: Path) -> None:
 if __name__ == "__main__":
     generate_portfolio_snapshots(
         input_csv=BLOCKCHAIN_TRANSACTIONS_FOLDER / "arbitrum_transactions.csv",
-        output_csv=BLOCKHAIN_SNAPSHOT_FOLDER / "arbitrum_snapshots.csv",
+        output_csv=BLOCKCHAIN_SNAPSHOT_FOLDER / "arbitrum_snapshots.csv",
     )
