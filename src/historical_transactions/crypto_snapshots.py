@@ -3,9 +3,11 @@ import json
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
+from blockchain_reader.symbols import canonicalize_symbol, sanitize_symbol
 from file_paths import (
     BLOCKCHAIN_SNAPSHOT_FOLDER,
     BLOCKCHAIN_TRANSACTIONS_FOLDER,
@@ -17,11 +19,14 @@ from historical_transactions.portfolio_snapshots import get_forex_rate
 
 STABLE_LIST = ["USDC", "USDT"]
 
-TOKEN_METADATA = {}
-token_file = TOKENS_FOLDER / "arbitrum_tokens.json"
-if token_file.exists():
+
+def _load_token_metadata(chain: str) -> dict[str, dict[str, Any]]:
+    token_file = TOKENS_FOLDER / f"{chain}_tokens.json"
+    if not token_file.exists():
+        return {}
     with open(token_file, "r") as f:
-        TOKEN_METADATA = json.load(f)
+        raw = json.load(f)
+    return {str(addr).lower(): meta for addr, meta in raw.items() if isinstance(meta, dict)}
 
 
 @functools.lru_cache(maxsize=None)
@@ -142,28 +147,64 @@ class TxEntry:
 
 
 class CryptoTracker:
-    def __init__(self):
+    def __init__(self, chain: str, token_metadata: dict[str, dict[str, Any]] | None = None):
+        self.chain = chain
+        self.token_metadata = token_metadata or _load_token_metadata(chain=chain)
+        self.symbol_to_meta: dict[str, dict[str, Any]] = {}
+        self.symbol_family: dict[str, str] = {}
+        self.aave_wrapper_symbols: set[str] = set()
+
+        for meta in self.token_metadata.values():
+            symbol = sanitize_symbol(meta.get("symbol"))
+            if not symbol:
+                continue
+            if symbol not in self.symbol_to_meta:
+                self.symbol_to_meta[symbol] = meta
+
+            family = sanitize_symbol(meta.get("family")) or symbol
+            self.symbol_family[symbol] = family
+
+            if meta.get("protocol") == "aave":
+                self.aave_wrapper_symbols.add(symbol)
+
         self.assets: dict[str, CryptoPosition] = {}
         self.history: list[dict] = []
         self.daily_coin_cache: dict[str, int] = {}
         self.current_date: str | None = None
 
     def fetch_asset(self, coin: str) -> CryptoPosition:
-        if coin not in self.assets:
-            meta = None
-            for m in TOKEN_METADATA.values():
-                if m.get("symbol") == coin:
-                    meta = m
-                    break
+        normalized_coin = sanitize_symbol(coin)
+        asset_key = normalized_coin or str(coin).strip()
+        if asset_key not in self.assets:
+            meta = self.symbol_to_meta.get(asset_key)
 
-            price_source = meta.get("price_source", coin) if meta else coin
-            family_coin = meta.get("family", coin) if meta else coin
+            price_source = sanitize_symbol(meta.get("price_source")) if meta else ""
+            if not price_source:
+                price_source = asset_key
 
-            self.assets[coin] = CryptoPosition(coin=coin, price_source=price_source)
-            if family_coin != coin:
-                self.assets[coin].family_proxy = self.fetch_asset(family_coin)
+            family_coin = canonicalize_symbol(
+                meta.get("family") if meta else asset_key,
+                symbol_family=self.symbol_family,
+            )
+            if not family_coin:
+                family_coin = asset_key
 
-        return self.assets[coin]
+            self.assets[asset_key] = CryptoPosition(coin=asset_key, price_source=price_source)
+            if family_coin != asset_key:
+                self.assets[asset_key].family_proxy = self.fetch_asset(family_coin)
+
+        return self.assets[asset_key]
+
+    def _filter_aave_wrapper_entries(self, entries: list[TxEntry]) -> tuple[list[TxEntry], int]:
+        filtered: list[TxEntry] = []
+        for entry in entries:
+            token = sanitize_symbol(entry.token)
+            if token in self.aave_wrapper_symbols:
+                continue
+            filtered.append(
+                TxEntry(token=token or entry.token, quantity=entry.quantity, val=entry.val)
+            )
+        return filtered
 
     def _collect_snapshots(self, asset: CryptoPosition, date: str) -> list[dict]:
         snaps = [asset.to_snapshot(date)]
@@ -321,7 +362,11 @@ class CryptoTracker:
             qty_str = str(qty_val)
             token_str = str(token_val) if pd.notna(token_val) else ""
             quantities = [Decimal(x.strip()) for x in qty_str.split(",") if x.strip()]
-            tokens = [x.strip() for x in token_str.split(",") if x.strip()]
+            tokens = []
+            for raw_token in token_str.split(","):
+                candidate = sanitize_symbol(raw_token.strip())
+                if candidate:
+                    tokens.append(candidate)
             return [TxEntry(token=t, quantity=q) for t, q in zip(tokens, quantities)]
 
         ins = _parse_entries(qty_val=row.get("Qty in"), token_val=row.get("Token in"))
@@ -404,15 +449,16 @@ class CryptoTracker:
         df = pd.DataFrame(self.history)
         df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d")
         df.to_csv(output_path, index=False)
-        print(f"🚀 Portfolio snapshots successfully saved to {output_path}")
+        print(f"Portfolio snapshots successfully saved to {output_path}")
 
 
-def generate_portfolio_snapshots(input_csv: Path, output_csv: Path) -> None:
+def generate_portfolio_snapshots(input_csv: Path, output_csv: Path, chain: str) -> None:
     df = pd.read_csv(input_csv, dtype=str)
-    df["Date"] = pd.to_datetime(df["Date"])
+    df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, errors="coerce")
+    df = df.dropna(subset=["Date"])
     df = df.sort_values(by=["Date"], ascending=True)
 
-    tracker = CryptoTracker()
+    tracker = CryptoTracker(chain=chain)
     for _, row in df.iterrows():
         tracker.process_transaction(row)
 
@@ -423,4 +469,5 @@ if __name__ == "__main__":
     generate_portfolio_snapshots(
         input_csv=BLOCKCHAIN_TRANSACTIONS_FOLDER / "arbitrum_transactions.csv",
         output_csv=BLOCKCHAIN_SNAPSHOT_FOLDER / "arbitrum_snapshots.csv",
+        chain="arbitrum",
     )
