@@ -286,6 +286,18 @@ class CryptoTracker:
             else:
                 asset_in.adjust_principal(-invested)
 
+    def _parse_reward_sources(self, tx_type_lower: str) -> list[str]:
+        if "|" not in tx_type_lower:
+            return []
+
+        _, raw_sources = tx_type_lower.split("|", 1)
+        sources: list[str] = []
+        for raw_source in raw_sources.split(","):
+            source = sanitize_symbol(raw_source.strip())
+            if source:
+                sources.append(source)
+        return sources
+
     def handle_fees(
         self,
         row: pd.Series,
@@ -415,7 +427,7 @@ class CryptoTracker:
             self._process_swap(ins=ins, outs=outs, date=date, touched_coins=touched_coins)
 
         elif tx_type_lower.startswith("reward"):
-            allocate_reward_to = tx_type_lower.split("|")[-1].split(",")
+            allocate_reward_to = self._parse_reward_sources(tx_type_lower=tx_type_lower)
             self._process_reward(
                 rewards=ins,
                 allocate_reward_to=allocate_reward_to,
