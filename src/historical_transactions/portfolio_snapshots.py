@@ -29,6 +29,12 @@ def get_forex_rate(currency: str, date: str) -> float:
 
     # Find the rate for the specific date or the nearest previous date (as-of)
     rate_row = df_forex[df_forex["Date"] <= target_date].sort_values("Date", ascending=False)
+    if rate_row.empty:
+        oldest_row = df_forex.sort_values("Date", ascending=True).head(1)
+        if oldest_row.empty:
+            error_msg = f"⚠️ Warning: Forex file for {currency} is empty."
+            raise ValueError(error_msg)
+        return oldest_row.iloc[0]["Price"]
     return rate_row.iloc[0]["Price"]
 
 
