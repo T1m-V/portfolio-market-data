@@ -7,15 +7,19 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from portfolio_core import CURRENCY_METADATA, PRICE_DATA_FOLDER, STOCK_METADATA
 
-from file_paths import CURRENCY_METADATA, PRICE_DATA_FOLDER, STOCK_METADATA
-from price_history import (
+from portfolio_market_data.prices import (
     fetch_history_defillama,
     fetch_history_single_stock_ft,
     fetch_history_single_stock_morningstar,
     fetch_history_single_stock_yahoo,
 )
-from price_history.price_data_utils import load_price_csv, merge_price_frames, normalize_price_frame
+from portfolio_market_data.prices.price_data_utils import (
+    load_price_csv,
+    merge_price_frames,
+    normalize_price_frame,
+)
 
 HISTORY_DAYS = 10
 MIN_FT_HISTORY_GAP_DAYS = 30

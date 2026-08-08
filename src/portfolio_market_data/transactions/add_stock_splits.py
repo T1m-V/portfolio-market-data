@@ -1,26 +1,27 @@
 import json
+from importlib.resources import files
 from pathlib import Path
 
 import pandas as pd
 import requests
-
-from file_paths import (
+from portfolio_core import (
     GETQUIN_URL,
-    SPLIT_QUERY_PATH,
     STOCK_SPLIT_JSON_PATH,
     TRANSACTIONS_FILE_PATH,
     get_token,
 )
 
-HEADERS = {
-    "authorization": get_token(),
-    "content-type": "application/json",
-    "accept": "*/*",
-    "user-agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-}
+
+def _headers() -> dict[str, str]:
+    return {
+        "authorization": get_token(),
+        "content-type": "application/json",
+        "accept": "*/*",
+        "user-agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+    }
 
 
 def get_dynamic_parameters(transaction_file: Path) -> tuple[list[str], str, str]:
@@ -46,6 +47,7 @@ def get_dynamic_parameters(transaction_file: Path) -> tuple[list[str], str, str]
 
 def download_splits(transaction_file: Path, output_file: Path) -> None:
     isins, start_date, end_date = get_dynamic_parameters(transaction_file=transaction_file)
+    query = files("portfolio_market_data.resources").joinpath("queries/stock_split.txt")
 
     payload = {
         "operationName": "getSplits",
@@ -55,15 +57,16 @@ def download_splits(transaction_file: Path, output_file: Path) -> None:
             "start_date_from": start_date,
             "start_date_to": end_date,
         },
-        "query": SPLIT_QUERY_PATH.read_text(encoding="utf-8"),
+        "query": query.read_text(encoding="utf-8"),
     }
 
     print("Requesting splits from API...")
     try:
-        response = requests.post(GETQUIN_URL, headers=HEADERS, json=payload)
+        response = requests.post(GETQUIN_URL, headers=_headers(), json=payload)
         response.raise_for_status()
 
         data = response.json()
+        output_file.parent.mkdir(parents=True, exist_ok=True)
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 

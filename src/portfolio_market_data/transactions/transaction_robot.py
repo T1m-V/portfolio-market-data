@@ -1,16 +1,17 @@
-from file_paths import (
+from portfolio_core import (
     SNAPSHOT_FILE_PATH,
     STOCK_SPLIT_JSON_PATH,
     TRANSACTION_JSON_PATH,
     TRANSACTIONS_FILE_PATH,
 )
-from historical_transactions.add_stock_splits import download_splits
-from historical_transactions.get_getquin_transactions import (
+
+from portfolio_market_data.transactions.add_stock_splits import download_splits
+from portfolio_market_data.transactions.get_getquin_transactions import (
     DEFAULT_TRANSACTION_LIMIT,
     download_transactions,
 )
-from historical_transactions.portfolio_snapshots import generate_portfolio_snapshots
-from historical_transactions.transform_data import convert_transaction_json_to_csv
+from portfolio_market_data.transactions.portfolio_snapshots import generate_portfolio_snapshots
+from portfolio_market_data.transactions.transform_data import convert_transaction_json_to_csv
 
 
 def main(transaction_limit: int = DEFAULT_TRANSACTION_LIMIT):

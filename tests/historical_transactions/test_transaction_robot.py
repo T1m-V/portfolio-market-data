@@ -1,14 +1,16 @@
 import importlib
 import sys
 
-import file_paths
+import portfolio_core as file_paths
 
 
 def test_transaction_robot_passes_requested_getquin_limit(monkeypatch) -> None:
     monkeypatch.setattr(file_paths, "get_token", lambda: "test-token")
-    sys.modules.pop("historical_transactions.add_stock_splits", None)
-    sys.modules.pop("historical_transactions.transaction_robot", None)
-    transaction_robot = importlib.import_module("historical_transactions.transaction_robot")
+    sys.modules.pop("portfolio_market_data.transactions.add_stock_splits", None)
+    sys.modules.pop("portfolio_market_data.transactions.transaction_robot", None)
+    transaction_robot = importlib.import_module(
+        "portfolio_market_data.transactions.transaction_robot"
+    )
 
     calls = []
 

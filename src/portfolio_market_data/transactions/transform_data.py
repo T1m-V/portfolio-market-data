@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-
-from file_paths import STOCK_SPLIT_JSON_PATH, TRANSACTION_DATA_FOLDER, TRANSACTION_JSON_PATH
+from portfolio_core import STOCK_SPLIT_JSON_PATH, TRANSACTION_DATA_FOLDER, TRANSACTION_JSON_PATH
 
 
 def convert_transaction_json_to_csv(tx_file: Path, split_file: Path, output_file: Path) -> None:

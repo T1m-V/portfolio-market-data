@@ -1,5 +1,5 @@
-from price_history.retrieve_last_prices import generate_latest_prices_summary
-from price_history.update_all_prices import update_portfolio_prices
+from portfolio_market_data.prices.retrieve_last_prices import generate_latest_prices_summary
+from portfolio_market_data.prices.update_all_prices import update_portfolio_prices
 
 
 def main() -> int:

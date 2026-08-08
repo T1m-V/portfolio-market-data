@@ -1,0 +1,1 @@
+"""Packaged API query resources."""

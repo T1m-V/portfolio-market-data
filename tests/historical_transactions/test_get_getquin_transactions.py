@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from historical_transactions import get_getquin_transactions
+from portfolio_market_data.transactions import get_getquin_transactions
 
 
 class _Response:

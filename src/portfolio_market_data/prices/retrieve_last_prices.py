@@ -1,8 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-
-from file_paths import PRICE_DATA_FOLDER, SUMMARY_FILE_PATH
+from portfolio_core import PRICE_DATA_FOLDER, SUMMARY_FILE_PATH
 
 SUMMARY_COLUMNS = ["date", "isin", "price"]
 

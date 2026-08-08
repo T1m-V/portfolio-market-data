@@ -3,39 +3,12 @@ from pathlib import Path
 from typing import Dict, List
 
 import pandas as pd
-
-from file_paths import PRICES_FOLDER, SNAPSHOT_FILE_PATH, STOCK_METADATA, TRANSACTIONS_FILE_PATH
-
-
-def get_forex_rate(currency: str, date: str) -> float:
-    """
-    Retrieves the exchange rate for a given date.
-
-    Assumes CSVs are named 'USD_EUR.csv' or similar, mapping 1 EUR to X units of 'currency'.
-    """
-    if currency == "EUR":
-        return 1.0
-
-    file_path = PRICES_FOLDER / f"{currency}_EUR.csv"
-
-    if not file_path.exists():
-        error_msg = f"⚠️ Warning: No forex data for {currency}. Defaulting to 1.0"
-        raise FileNotFoundError(error_msg)
-
-    df_forex = pd.read_csv(file_path)
-    df_forex["Date"] = pd.to_datetime(df_forex["Date"]).dt.date
-
-    target_date = pd.to_datetime(date).date()
-
-    # Find the rate for the specific date or the nearest previous date (as-of)
-    rate_row = df_forex[df_forex["Date"] <= target_date].sort_values("Date", ascending=False)
-    if rate_row.empty:
-        oldest_row = df_forex.sort_values("Date", ascending=True).head(1)
-        if oldest_row.empty:
-            error_msg = f"⚠️ Warning: Forex file for {currency} is empty."
-            raise ValueError(error_msg)
-        return oldest_row.iloc[0]["Price"]
-    return rate_row.iloc[0]["Price"]
+from portfolio_core import (
+    SNAPSHOT_FILE_PATH,
+    STOCK_METADATA,
+    TRANSACTIONS_FILE_PATH,
+    get_forex_rate,
+)
 
 
 @dataclass
@@ -140,6 +113,7 @@ class PortfolioTracker:
             self.history.append(new_snapshot)
 
     def save_to_csv(self, output_path: Path):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(self.history)
         df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d")
         df.to_csv(output_path, index=False)

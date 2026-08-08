@@ -1,9 +1,9 @@
 import json
+from importlib.resources import files
 from pathlib import Path
 
 import requests
-
-from file_paths import GETQUIN_URL, TRANSACTION_JSON_PATH, TRANSACTION_QUERY_PATH, get_token
+from portfolio_core import GETQUIN_URL, TRANSACTION_JSON_PATH, get_token
 
 DEFAULT_TRANSACTION_LIMIT = 20
 
@@ -28,6 +28,7 @@ def _headers() -> dict[str, str]:
 
 
 def _payload(limit: int) -> dict:
+    query = files("portfolio_market_data.resources").joinpath("queries/transactions.txt")
     return {
         "operationName": "getDashboardAggregatedTransactions",
         "variables": {
@@ -36,7 +37,7 @@ def _payload(limit: int) -> dict:
             "offset": 0,
             "transaction_type__in": [],
         },
-        "query": TRANSACTION_QUERY_PATH.read_text(encoding="utf-8"),
+        "query": query.read_text(encoding="utf-8"),
     }
 
 
