@@ -1,20 +1,20 @@
-import json
 from importlib.resources import files
 from pathlib import Path
 
 import requests
-from portfolio_core import GETQUIN_URL, TRANSACTION_JSON_PATH, get_token
+from portfolio_core import atomic_write_json
 
 DEFAULT_TRANSACTION_LIMIT = 20
+GETQUIN_URL = "https://api-gql-v2.getquin.com/"
 
 
-def _headers() -> dict[str, str]:
+def _headers(*, token: str) -> dict[str, str]:
     return {
         "accept": "*/*",
         "accept-language": "en",
         "apollographql-client-name": "web",
         "apollographql-client-version": "2.213.2",
-        "authorization": get_token(),
+        "authorization": token,
         "content-type": "application/json",
         "priority": "u=1, i",
         "sec-ch-ua": '"Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
@@ -54,21 +54,17 @@ def _extract_transactions(data: dict) -> list[dict]:
     return transactions["results"]
 
 
-def download_transactions(output_file: Path, limit: int = DEFAULT_TRANSACTION_LIMIT) -> None:
+def download_transactions(
+    *, output_file: Path, token: str, limit: int = DEFAULT_TRANSACTION_LIMIT
+) -> None:
     print("Sending request to getquin API...")
-    response = requests.post(GETQUIN_URL, headers=_headers(), json=_payload(limit=limit))
+    response = requests.post(GETQUIN_URL, headers=_headers(token=token), json=_payload(limit=limit))
     response.raise_for_status()
 
     data = response.json()
     transactions = _extract_transactions(data=data)
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+    atomic_write_json(data=data, path=output_file)
 
     print(f"Successfully downloaded {len(transactions)} transactions.")
     print(f"Data saved to {output_file}")
-
-
-if __name__ == "__main__":
-    download_transactions(output_file=TRANSACTION_JSON_PATH)

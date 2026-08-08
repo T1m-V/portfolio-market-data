@@ -19,6 +19,8 @@ portfolio snapshots. It is an installable library and exposes the `portfolio-mar
 
 - `portfolio_market_data.prices`: Yahoo, Morningstar, DefiLlama, merge, and latest-price flows.
 - `portfolio_market_data.transactions`: Getquin export, stock splits, normalization, and snapshots.
+- `portfolio_market_data.dashboard_data`: read-only stock projections deliberately consumed by the
+  dashboard.
 - `portfolio_market_data.resources.queries`: packaged Getquin query text; load it with
   `importlib.resources` so wheels work without a checkout.
 - `portfolio_market_data.cli`: stable process boundary used by people, the dashboard, and GitHub
@@ -66,8 +68,11 @@ Price and transaction commands call external services and write user data. Do no
 ordinary linting, tests, review, or refactoring unless the user explicitly requests a refresh.
 Tests must mock network boundaries and use temporary workspaces.
 
-`GETQUIN_TOKEN` is loaded from the selected workspace `.env` or ignored compatibility credential
-file. Never print, commit, or copy it into fixtures.
+`GETQUIN_TOKEN` is loaded from the selected workspace `.env` or the process environment. Credential
+files are not supported. Never print, commit, or copy the token into fixtures.
+
+Both CLI commands acquire the core-owned workspace mutation lock and publish a run manifest.
+Writers must use core atomic-write helpers so dashboard readers never observe half-written files.
 
 ## Release Coordination
 

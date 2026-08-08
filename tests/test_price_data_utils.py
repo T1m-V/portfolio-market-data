@@ -1,6 +1,5 @@
 import pandas as pd
-
-from portfolio_market_data.prices.price_data_utils import merge_price_frames, normalize_price_frame
+from portfolio_core import merge_price_frames, normalize_price_frame
 
 
 def test_normalize_price_frame_keeps_schema_and_sort() -> None:

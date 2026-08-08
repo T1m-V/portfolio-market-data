@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from portfolio_core import PRICE_DATA_FOLDER, SUMMARY_FILE_PATH
+from portfolio_core import PortfolioPaths, atomic_write_csv
 
 SUMMARY_COLUMNS = ["date", "isin", "price"]
 
@@ -27,18 +27,18 @@ def _read_latest_row(file_path: Path) -> dict[str, str | float] | None:
     }
 
 
-def generate_latest_prices_summary() -> pd.DataFrame:
+def generate_latest_prices_summary(*, paths: PortfolioPaths) -> pd.DataFrame:
     """
     Reads all local price CSV files and writes latest_prices.csv.
 
     returns:
         Generated summary frame.
     """
-    if not PRICE_DATA_FOLDER.exists():
+    if not paths.prices.exists():
         print("Price data directory does not exist.")
         return pd.DataFrame(columns=SUMMARY_COLUMNS)
 
-    csv_files = _list_price_files(price_folder=PRICE_DATA_FOLDER)
+    csv_files = _list_price_files(price_folder=paths.prices)
     if not csv_files:
         print("No price files found to summarize.")
         return pd.DataFrame(columns=SUMMARY_COLUMNS)
@@ -57,10 +57,6 @@ def generate_latest_prices_summary() -> pd.DataFrame:
     else:
         summary_frame = summary_frame.sort_values(by="isin", ascending=True)
 
-    summary_frame.to_csv(SUMMARY_FILE_PATH, index=False)
-    print(f"Summary saved to: {SUMMARY_FILE_PATH}")
+    atomic_write_csv(frame=summary_frame, path=paths.latest_prices)
+    print(f"Summary saved to: {paths.latest_prices}")
     return summary_frame
-
-
-if __name__ == "__main__":
-    generate_latest_prices_summary()

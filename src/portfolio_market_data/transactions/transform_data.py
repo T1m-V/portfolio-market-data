@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from portfolio_core import STOCK_SPLIT_JSON_PATH, TRANSACTION_DATA_FOLDER, TRANSACTION_JSON_PATH
+from portfolio_core import atomic_write_csv
 
 
 def convert_transaction_json_to_csv(tx_file: Path, split_file: Path, output_file: Path) -> None:
@@ -89,14 +89,5 @@ def convert_transaction_json_to_csv(tx_file: Path, split_file: Path, output_file
     df_final["Date"] = df_final["Date"].dt.strftime("%Y-%m-%d")
 
     # 9. Export
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    df_final.to_csv(output_file, index=False)
+    atomic_write_csv(frame=df_final, path=output_file)
     print(f"Successfully converted data to {output_file}")
-
-
-if __name__ == "__main__":
-    convert_transaction_json_to_csv(
-        tx_file=TRANSACTION_JSON_PATH,
-        split_file=STOCK_SPLIT_JSON_PATH,
-        output_file=TRANSACTION_DATA_FOLDER,
-    )

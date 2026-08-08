@@ -2,23 +2,23 @@ import random
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from portfolio_core import CURRENCY_METADATA, PRICE_DATA_FOLDER, STOCK_METADATA
+from portfolio_core import (
+    PortfolioContext,
+    load_price_csv,
+    merge_price_frames,
+    normalize_price_frame,
+    save_price_csv,
+)
 
 from portfolio_market_data.prices import (
     fetch_history_defillama,
     fetch_history_single_stock_ft,
     fetch_history_single_stock_morningstar,
     fetch_history_single_stock_yahoo,
-)
-from portfolio_market_data.prices.price_data_utils import (
-    load_price_csv,
-    merge_price_frames,
-    normalize_price_frame,
 )
 
 HISTORY_DAYS = 10
@@ -36,18 +36,17 @@ class AssetUpdateResult:
     reason: str | None
 
 
-@lru_cache(maxsize=1)
-def load_all_metadata() -> dict[str, dict[str, Any]]:
+def load_all_metadata(*, context: PortfolioContext) -> dict[str, dict[str, Any]]:
     """
     Caches and returns merged metadata.
 
     returns:
         Asset metadata map keyed by identifier.
     """
-    return CURRENCY_METADATA.copy() | STOCK_METADATA.copy()
+    return context.currency_metadata() | context.stock_metadata()
 
 
-def get_last_update_date(identifier: str) -> datetime | None:
+def get_last_update_date(*, identifier: str, prices_folder: Path) -> datetime | None:
     """
     Reads the newest known date for an asset.
 
@@ -57,15 +56,15 @@ def get_last_update_date(identifier: str) -> datetime | None:
     returns:
         Parsed max date or None when unavailable.
     """
-    file_path = _price_file_path(identifier=identifier)
+    file_path = _price_file_path(identifier=identifier, prices_folder=prices_folder)
     frame = load_price_csv(file_path=file_path)
     if frame.empty:
         return None
     return pd.to_datetime(frame["Date"]).max()
 
 
-def _price_file_path(identifier: str) -> Path:
-    return PRICE_DATA_FOLDER / f"{identifier}.csv"
+def _price_file_path(*, identifier: str, prices_folder: Path) -> Path:
+    return prices_folder / f"{identifier}.csv"
 
 
 def _can_use_ft(last_date: datetime | None, now: datetime) -> bool:
@@ -105,16 +104,18 @@ def _fetch_from_source(
 
 
 def _save_and_merge(
+    *,
     identifier: str,
     incoming: pd.DataFrame,
+    prices_folder: Path,
     history_start: str | None = None,
 ) -> int:
-    file_path = _price_file_path(identifier=identifier)
+    file_path = _price_file_path(identifier=identifier, prices_folder=prices_folder)
     existing = load_price_csv(file_path=file_path)
     merged = merge_price_frames(existing=existing, incoming=incoming)
     if history_start:
         merged = merged[pd.to_datetime(merged["Date"]) >= pd.Timestamp(history_start)]
-    merged.to_csv(file_path, index=False)
+    save_price_csv(frame=merged, file_path=file_path)
     return len(merged)
 
 
@@ -124,9 +125,11 @@ def _should_sleep_after_source(source: str) -> bool:
 
 
 def update_single_asset(
+    *,
     identifier: str,
     asset_config: dict[str, Any],
     now: datetime,
+    prices_folder: Path,
 ) -> AssetUpdateResult:
     """
     Updates one asset by trying configured source waterfall.
@@ -160,7 +163,7 @@ def update_single_asset(
             reason="no_sources_configured",
         )
 
-    last_date = get_last_update_date(identifier=identifier)
+    last_date = get_last_update_date(identifier=identifier, prices_folder=prices_folder)
     for source in waterfall:
         if source == "FT" and not _can_use_ft(last_date=last_date, now=now):
             print(f"[{identifier}] skipping FT: data gap too large")
@@ -187,6 +190,7 @@ def update_single_asset(
         rows_written = _save_and_merge(
             identifier=identifier,
             incoming=normalized,
+            prices_folder=prices_folder,
             history_start=asset_config.get("history_start"),
         )
         if _should_sleep_after_source(source=source):
@@ -212,21 +216,26 @@ def update_single_asset(
     )
 
 
-def update_portfolio_prices() -> list[AssetUpdateResult]:
+def update_portfolio_prices(*, context: PortfolioContext) -> list[AssetUpdateResult]:
     """
     Updates all active assets in metadata.
 
     returns:
         List of per-asset results.
     """
-    all_assets = load_all_metadata()
+    all_assets = load_all_metadata(context=context)
     now = datetime.now()
 
     print(f"Processing {len(all_assets)} total assets...")
     results: list[AssetUpdateResult] = []
 
     for identifier, asset_config in all_assets.items():
-        result = update_single_asset(identifier=identifier, asset_config=asset_config, now=now)
+        result = update_single_asset(
+            identifier=identifier,
+            asset_config=asset_config,
+            now=now,
+            prices_folder=context.paths.prices,
+        )
         results.append(result)
 
         if result.success:
@@ -247,7 +256,3 @@ def update_portfolio_prices() -> list[AssetUpdateResult]:
         f"success={success_count}, skipped={skipped_count}, failed={failed_count}"
     )
     return results
-
-
-if __name__ == "__main__":
-    update_portfolio_prices()

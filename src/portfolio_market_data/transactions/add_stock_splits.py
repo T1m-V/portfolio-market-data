@@ -4,17 +4,14 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from portfolio_core import (
-    GETQUIN_URL,
-    STOCK_SPLIT_JSON_PATH,
-    TRANSACTIONS_FILE_PATH,
-    get_token,
-)
+from portfolio_core import atomic_write_json
+
+GETQUIN_URL = "https://api-gql-v2.getquin.com/"
 
 
-def _headers() -> dict[str, str]:
+def _headers(*, token: str) -> dict[str, str]:
     return {
-        "authorization": get_token(),
+        "authorization": token,
         "content-type": "application/json",
         "accept": "*/*",
         "user-agent": (
@@ -45,7 +42,7 @@ def get_dynamic_parameters(transaction_file: Path) -> tuple[list[str], str, str]
     return isins, start_date, end_date
 
 
-def download_splits(transaction_file: Path, output_file: Path) -> None:
+def download_splits(*, transaction_file: Path, output_file: Path, token: str) -> None:
     isins, start_date, end_date = get_dynamic_parameters(transaction_file=transaction_file)
     query = files("portfolio_market_data.resources").joinpath("queries/stock_split.txt")
 
@@ -62,20 +59,14 @@ def download_splits(transaction_file: Path, output_file: Path) -> None:
 
     print("Requesting splits from API...")
     try:
-        response = requests.post(GETQUIN_URL, headers=_headers(), json=payload)
+        response = requests.post(GETQUIN_URL, headers=_headers(token=token), json=payload)
         response.raise_for_status()
 
         data = response.json()
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+        atomic_write_json(data=data, path=output_file)
 
         count = len(data.get("data", {}).get("splits", []))
         print(f"✅ Success! Found {count} splits. Saved to {output_file}")
 
     except Exception as e:
         print(f"API Error: {e}")
-
-
-if __name__ == "__main__":
-    download_splits(transaction_file=TRANSACTIONS_FILE_PATH, output_file=STOCK_SPLIT_JSON_PATH)

@@ -1,14 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Any
 
 import pandas as pd
-from portfolio_core import (
-    SNAPSHOT_FILE_PATH,
-    STOCK_METADATA,
-    TRANSACTIONS_FILE_PATH,
-    get_forex_rate,
-)
+from portfolio_core import atomic_write_csv, get_forex_rate
 
 
 @dataclass
@@ -21,17 +16,19 @@ class AssetPosition:
     fees: float = 0.0
     taxes: float = 0.0
     dividends: float = 0.0
-
-    @property
-    def config(self):
-        return STOCK_METADATA.get(self.isin, {"currency": "EUR"})
+    currency: str = "EUR"
+    prices_folder: Path | None = None
 
     def convert_to_eur(self, amount: float, date: str) -> float:
-        currency = self.config.get("currency", "EUR")
-        if currency == "EUR":
+        if self.currency == "EUR":
             return amount
-
-        rate = get_forex_rate(currency, date)
+        if self.prices_folder is None:
+            raise RuntimeError("prices_folder is required for non-EUR assets")
+        rate = get_forex_rate(
+            currency=self.currency,
+            date=date,
+            prices_folder=self.prices_folder,
+        )
         return amount * rate
 
     def buy(self, qty: float, price: float, fees: float, taxes: float, date: str):
@@ -66,13 +63,20 @@ class AssetPosition:
 
 
 class PortfolioTracker:
-    def __init__(self):
-        self.assets: Dict[str, AssetPosition] = {}
-        self.history: List[dict] = []
+    def __init__(self, *, stock_metadata: dict[str, dict[str, Any]], prices_folder: Path):
+        self.stock_metadata = stock_metadata
+        self.prices_folder = prices_folder
+        self.assets: dict[str, AssetPosition] = {}
+        self.history: list[dict] = []
 
     def fetch_asset(self, isin: str) -> AssetPosition:
         if isin not in self.assets:
-            self.assets[isin] = AssetPosition(isin=isin)
+            currency = self.stock_metadata.get(isin, {}).get("currency", "EUR")
+            self.assets[isin] = AssetPosition(
+                isin=isin,
+                currency=currency,
+                prices_folder=self.prices_folder,
+            )
         return self.assets[isin]
 
     def process_transaction(self, row: pd.Series):
@@ -116,21 +120,23 @@ class PortfolioTracker:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(self.history)
         df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d")
-        df.to_csv(output_path, index=False)
+        atomic_write_csv(frame=df, path=output_path)
         print(f"🚀 Portfolio snapshots successfully saved to {output_path}")
 
 
-def generate_portfolio_snapshots(input_csv: Path, output_csv: Path) -> None:
+def generate_portfolio_snapshots(
+    *,
+    input_csv: Path,
+    output_csv: Path,
+    stock_metadata: dict[str, dict[str, Any]],
+    prices_folder: Path,
+) -> None:
     df = pd.read_csv(input_csv)
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values(by=["Date", "ISIN"], ascending=[True, True])
 
-    tracker = PortfolioTracker()
+    tracker = PortfolioTracker(stock_metadata=stock_metadata, prices_folder=prices_folder)
     for _, row in df.iterrows():
         tracker.process_transaction(row)
 
     tracker.save_to_csv(output_csv)
-
-
-if __name__ == "__main__":
-    generate_portfolio_snapshots(input_csv=TRANSACTIONS_FILE_PATH, output_csv=SNAPSHOT_FILE_PATH)

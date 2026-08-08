@@ -17,11 +17,6 @@ class _Response:
         return self._data
 
 
-@pytest.fixture(autouse=True)
-def _token(monkeypatch) -> None:
-    monkeypatch.setattr(get_getquin_transactions, "get_token", lambda: "test-token")
-
-
 def test_download_transactions_rejects_graphql_errors(monkeypatch, tmp_path: Path) -> None:
     output_file = tmp_path / "transactions_export.json"
 
@@ -37,7 +32,7 @@ def test_download_transactions_rejects_graphql_errors(monkeypatch, tmp_path: Pat
     )
 
     with pytest.raises(RuntimeError, match="401: Unauthorized"):
-        get_getquin_transactions.download_transactions(output_file=output_file)
+        get_getquin_transactions.download_transactions(output_file=output_file, token="test-token")
 
     assert not output_file.exists()
 
@@ -52,7 +47,7 @@ def test_download_transactions_writes_valid_response(monkeypatch, tmp_path: Path
         lambda *args, **kwargs: _Response(data=data),
     )
 
-    get_getquin_transactions.download_transactions(output_file=output_file)
+    get_getquin_transactions.download_transactions(output_file=output_file, token="test-token")
 
     assert json.loads(output_file.read_text(encoding="utf-8")) == data
 
@@ -71,7 +66,7 @@ def test_download_transactions_defaults_to_twenty_recent_rows(
 
     monkeypatch.setattr(get_getquin_transactions.requests, "post", post)
 
-    get_getquin_transactions.download_transactions(output_file=output_file)
+    get_getquin_transactions.download_transactions(output_file=output_file, token="test-token")
 
     assert payloads[0]["variables"]["limit"] == 20
 
@@ -87,6 +82,10 @@ def test_download_transactions_uses_requested_limit(monkeypatch, tmp_path: Path)
 
     monkeypatch.setattr(get_getquin_transactions.requests, "post", post)
 
-    get_getquin_transactions.download_transactions(output_file=output_file, limit=500)
+    get_getquin_transactions.download_transactions(
+        output_file=output_file,
+        token="test-token",
+        limit=500,
+    )
 
     assert payloads[0]["variables"]["limit"] == 500
