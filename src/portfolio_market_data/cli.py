@@ -34,11 +34,11 @@ def main(argv: list[str] | None = None) -> int:
         version=version("portfolio-market-data"),
     ):
         if args.domain == "prices":
-            from portfolio_market_data.prices.update import update_prices
+            from portfolio_market_data.prices import update_prices
 
             return update_prices(context=context)
 
-        from portfolio_market_data.transactions.update import update_transactions
+        from portfolio_market_data.transactions import update_transactions
 
         update_transactions(context=context, transaction_limit=args.limit)
     return 0

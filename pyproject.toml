@@ -5,7 +5,6 @@ description = "Off-chain market price and Getquin transaction loaders"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
-    "html5lib>=1.1",
     "lxml>=6.0.2",
     "mstarpy>=8.0.3",
     "pandas>=2.3.3",

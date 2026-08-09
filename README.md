@@ -1,5 +1,7 @@
 # portfolio-market-data
 
+Off-chain price and Getquin loaders for the shared portfolio data workspace.
+
 ## End-user installation
 
 The dashboard and data workspace install the immutable `v0.2.0` package from GitHub. A source
@@ -27,6 +29,16 @@ uv build
 The printed core path should be inside the sibling `portfolio-core` checkout. Python edits there
 are visible immediately; rerun `uv lock` and `uv sync` only after dependency metadata changes.
 
+## Runtime layout
+
+- `prices`: fetches Yahoo, Morningstar, FT, and DeFiLlama histories, then rebuilds
+  `latest_prices.csv`.
+- `transactions`: fetches Getquin transactions and splits, normalizes them, and rebuilds
+  portfolio snapshots.
+- `dashboard_data`: exposes the three read-only stock projections consumed by
+  `portfolio-dashboard`.
+- `cli`: validates and locks the workspace around either update.
+
 Loader commands operate on an explicit data workspace:
 
 ```powershell
@@ -35,3 +47,4 @@ uv run portfolio-market --data-dir C:\path\to\portfolio-data transactions update
 ```
 
 These update commands call external services and mutate data; they are not ordinary test commands.
+Provider and network boundaries are mocked in tests, so the test suite never refreshes user data.

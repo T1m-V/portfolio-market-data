@@ -9,6 +9,5 @@ query getSplits($isin__in: [String], $start_date_from: String, $start_date_to: S
     isin
     numerator
     start_date
-    __typename
     }
 }
