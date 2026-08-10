@@ -575,7 +575,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "lxml", specifier = ">=6.0.2" },
-    { name = "mstarpy", specifier = ">=8.0.3" },
+    { name = "mstarpy", specifier = ">=11.0.1,<12" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "portfolio-core", editable = "../portfolio-core" },
     { name = "requests", specifier = ">=2.32.5" },
