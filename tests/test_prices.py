@@ -52,6 +52,27 @@ def test_provider_adapters_return_date_and_price(monkeypatch) -> None:
     assert ft.iloc[0].to_dict() == {"Date": "Aug 07 2026", "Price": "1234.5"}
 
 
+def test_morningstar_adapter_does_not_use_removed_module_screener(monkeypatch) -> None:
+    class MorningstarFund:
+        def nav(self, **kwargs) -> list[dict]:
+            return [{"date": "2026-08-07", "nav": 13.5}]
+
+    def removed_screener(**kwargs) -> None:
+        raise AssertionError("the removed module-level screener must not be used")
+
+    monkeypatch.setattr(
+        prices.mstarpy,
+        "screener_universe",
+        removed_screener,
+        raising=False,
+    )
+    monkeypatch.setattr(prices.mstarpy, "Funds", lambda term: MorningstarFund())
+
+    result = prices._fetch_morningstar("IE0009HF1MK9", {}, 10)
+
+    assert result.to_dict("records") == [{"Date": "2026-08-07", "Price": 13.5}]
+
+
 def test_llama_adapter_collects_available_daily_prices(monkeypatch) -> None:
     responses = iter(
         [
