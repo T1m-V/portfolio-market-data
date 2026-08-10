@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "lxml>=6.0.2",
-    "mstarpy>=8.0.3",
+    "mstarpy>=11.0.1,<12",
     "pandas>=2.3.3",
     "portfolio-core @ git+https://github.com/T1m-V/portfolio-core.git@v0.2.0",
     "requests>=2.32.5",
