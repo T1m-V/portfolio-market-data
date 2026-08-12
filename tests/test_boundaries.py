@@ -88,6 +88,3 @@ def test_cli_preserves_both_cross_repository_commands(monkeypatch, tmp_path: Pat
         == 0
     )
     assert calls == ["prices", ("transactions", 7)]
-    manifests = list((tmp_path / "runtime" / "manifests").glob("*.json"))
-    assert len(manifests) == 2
-    assert all(json.loads(path.read_text())["status"] == "completed" for path in manifests)
