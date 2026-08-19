@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from importlib.metadata import version
 from pathlib import Path
 
 from portfolio_core import PortfolioContext, mutation_session, validate_data_workspace
@@ -27,12 +26,7 @@ def main(argv: list[str] | None = None) -> int:
     context = PortfolioContext.from_root(args.data_dir)
     validate_data_workspace(context.paths.root)
 
-    component = f"market-{args.domain}"
-    with context.activate(), mutation_session(
-        paths=context.paths,
-        component=component,
-        version=version("portfolio-market-data"),
-    ):
+    with context.activate(), mutation_session(paths=context.paths):
         if args.domain == "prices":
             from portfolio_market_data.prices import update_prices
 
