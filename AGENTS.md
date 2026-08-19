@@ -71,8 +71,8 @@ Tests must mock network boundaries and use temporary workspaces.
 `GETQUIN_TOKEN` is loaded from the selected workspace `.env` or the process environment. Credential
 files are not supported. Never print, commit, or copy the token into fixtures.
 
-Both CLI commands acquire the core-owned workspace mutation lock and publish a run manifest.
-Writers must use core atomic-write helpers so dashboard readers never observe half-written files.
+Both CLI commands acquire the core-owned workspace mutation lock. Writers must use core
+atomic-write helpers so dashboard readers never observe half-written files.
 
 ## Release Coordination
 
