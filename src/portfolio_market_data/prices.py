@@ -117,11 +117,7 @@ def _update_asset(
         return "skipped"
 
     for source in config["waterfall"]:
-        fetcher = FETCHERS.get(source)
-        if fetcher is None:
-            print(f"[{identifier}] skipping unsupported source={source}")
-            continue
-
+        fetcher = FETCHERS[source]
         print(f"[{identifier}] trying source={source}")
         try:
             incoming = normalize_price_frame(

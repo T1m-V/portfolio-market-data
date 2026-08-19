@@ -4,11 +4,11 @@ Off-chain price and Getquin loaders for the shared portfolio data workspace.
 
 ## End-user installation
 
-The dashboard and data workspace install the immutable `v0.2.1` package from GitHub. A source
+The dashboard and data workspace install the immutable `v0.3.0` package from GitHub. A source
 checkout is not required. To install the CLI by itself:
 
 ```powershell
-uv tool install "portfolio-market-data @ git+https://github.com/T1m-V/portfolio-market-data.git@v0.2.1"
+uv tool install "portfolio-market-data @ git+https://github.com/T1m-V/portfolio-market-data.git@v0.3.0"
 portfolio-market --help
 ```
 

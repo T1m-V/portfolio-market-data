@@ -88,3 +88,4 @@ def test_cli_preserves_both_cross_repository_commands(monkeypatch, tmp_path: Pat
         == 0
     )
     assert calls == ["prices", ("transactions", 7)]
+    assert not (tmp_path / "runtime" / "mutation.lock").exists()
