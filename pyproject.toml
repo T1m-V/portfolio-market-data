@@ -1,6 +1,6 @@
 [project]
 name = "portfolio-market-data"
-version = "0.3.0"
+version = "0.3.1"
 description = "Off-chain market price and Getquin transaction loaders"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"

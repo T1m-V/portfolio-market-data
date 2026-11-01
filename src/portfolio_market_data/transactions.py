@@ -41,7 +41,13 @@ def _request(*, token: str, operation: str, variables: dict, query_file: str) ->
             "authorization": token,
             "content-type": "application/json",
             "apollographql-client-name": "web",
-            "apollographql-client-version": "2.213.2",
+            "apollographql-client-version": "2.271.0",
+            "origin": "https://app.getquin.com",
+            "referer": "https://app.getquin.com/",
+            "user-agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+            ),
         },
         json={
             "operationName": operation,
