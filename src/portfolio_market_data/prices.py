@@ -174,4 +174,4 @@ def update_prices(*, context: PortfolioContext) -> int:
         f"updated={counts['updated']}, skipped={counts['skipped']}, "
         f"failed={counts['failed']}, summary_rows={len(summary)}"
     )
-    return 0
+    return 1 if counts["failed"] > 0 else 0

@@ -23,7 +23,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    context = PortfolioContext.from_root(args.data_dir)
+    context = PortfolioContext.load(args.data_dir)
     validate_data_workspace(context.paths.root)
 
     with context.activate(), mutation_session(paths=context.paths):

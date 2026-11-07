@@ -204,7 +204,7 @@ def _generate_snapshots(
                 position.quantity *= quantity
                 for snapshot in history:
                     if snapshot["ISIN"] == isin:
-                        snapshot["Quantity"] *= quantity
+                        snapshot["Quantity"] = round(snapshot["Quantity"] * quantity, 6)
             case unexpected:
                 raise ValueError(f"Unsupported transaction type: {unexpected}")
 

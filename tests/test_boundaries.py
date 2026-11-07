@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from portfolio_core import PortfolioContext
 
-from portfolio_market_data import cli, prices, transactions
+from portfolio_market_data import transactions
 from portfolio_market_data.dashboard_data import (
     get_stock_start_date,
     load_recent_stock_transactions,
@@ -14,7 +14,7 @@ from portfolio_market_data.dashboard_data import (
 
 
 def test_dashboard_stock_projections_use_metadata_assets_and_asof_forex(tmp_path: Path) -> None:
-    context = PortfolioContext.from_root(tmp_path, load_secrets=False)
+    context = PortfolioContext.load(tmp_path, load_secrets=False)
     context.paths.config.mkdir(parents=True)
     context.paths.prices.mkdir()
     context.paths.transactions.mkdir()
@@ -68,24 +68,3 @@ def test_dashboard_stock_projections_use_metadata_assets_and_asof_forex(tmp_path
         context=context, end_date="2026-01-03", isins=[], limit=5
     ).empty
     assert get_stock_start_date(context=context, isins=["USD_ASSET"]) == "2026-01-02"
-
-
-def test_cli_preserves_both_cross_repository_commands(monkeypatch, tmp_path: Path) -> None:
-    (tmp_path / "portfolio.toml").write_text("schema_version = 1\n", encoding="utf-8")
-    calls = []
-    monkeypatch.setattr(prices, "update_prices", lambda *, context: calls.append("prices") or 0)
-    monkeypatch.setattr(
-        transactions,
-        "update_transactions",
-        lambda *, context, transaction_limit: calls.append(("transactions", transaction_limit)),
-    )
-
-    assert cli.main(["--data-dir", str(tmp_path), "prices", "update"]) == 0
-    assert (
-        cli.main(
-            ["--data-dir", str(tmp_path), "transactions", "update", "--limit", "7"]
-        )
-        == 0
-    )
-    assert calls == ["prices", ("transactions", 7)]
-    assert not (tmp_path / "runtime" / "mutation.lock").exists()

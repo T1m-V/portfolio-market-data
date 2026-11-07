@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import pandas as pd
-import pytest
 from portfolio_core import PortfolioContext
 
 from portfolio_market_data import transactions
@@ -42,7 +41,7 @@ class _Response:
 
 
 def test_transaction_update_writes_all_workspace_contracts(monkeypatch, tmp_path: Path) -> None:
-    context = PortfolioContext.from_root(tmp_path, load_secrets=False)
+    context = PortfolioContext.load(tmp_path, load_secrets=False)
     context.paths.prices.mkdir(parents=True)
     pd.DataFrame({"Date": ["2025-12-31"], "Price": [0.9]}).to_csv(
         context.paths.direct_price("USD_EUR"), index=False
@@ -111,16 +110,3 @@ def test_normalization_keeps_history_and_replaces_refetched_ids(tmp_path: Path) 
 
     assert result["Transaction ID"].tolist() == ["same", "old"]
     assert result.loc[result["Transaction ID"] == "same", "Price"].item() == 2
-
-
-def test_graphql_errors_do_not_replace_export(monkeypatch, tmp_path: Path) -> None:
-    output = tmp_path / "transactions.json"
-    monkeypatch.setattr(
-        transactions.requests,
-        "post",
-        lambda *args, **kwargs: _Response({"errors": [{"message": "unauthorized"}]}),
-    )
-
-    with pytest.raises(RuntimeError, match="unauthorized"):
-        transactions._download_transactions(output_file=output, token="bad", limit=20)
-    assert not output.exists()

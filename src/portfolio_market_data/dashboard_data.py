@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
-from portfolio_core import PortfolioContext
+from portfolio_core import PortfolioContext, load_price_csv
 
 POSITION_COLUMNS = [
     "Quantity",
@@ -15,14 +15,17 @@ POSITION_COLUMNS = [
 def _daily_prices(
     *, context: PortfolioContext, isin: str, currency: str, end: pd.Timestamp
 ) -> pd.DataFrame:
-    prices = pd.read_csv(context.paths.direct_price(isin))
+    prices = load_price_csv(context.paths.direct_price(isin))
+    if prices.empty:
+        return pd.DataFrame(columns=["Date", "ISIN", "Price"])
+
     prices["Date"] = pd.to_datetime(prices["Date"])
     prices = prices[prices["Date"] <= end].sort_values("Date")
     if prices.empty:
         return pd.DataFrame(columns=["Date", "ISIN", "Price"])
 
     if currency != "EUR":
-        forex = pd.read_csv(context.paths.direct_price(f"{currency}_EUR"))
+        forex = load_price_csv(context.paths.direct_price(f"{currency}_EUR"))
         forex["Date"] = pd.to_datetime(forex["Date"])
         forex = forex.rename(columns={"Price": "FX Rate"}).sort_values("Date")
         prices = pd.merge_asof(prices, forex[["Date", "FX Rate"]], on="Date")
